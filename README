@@ -1,0 +1,8 @@
+AudibleMPD is a program that captures events from /dev/input/eventX and uses
+those to control MPD. Due to the way it handles input, there is no requirement
+for having any sort of visual output from the program. Instead, the application
+provides audio cues for playlist switching/searching (and optional announcements
+on song change) using the linux tool espeak (everything else has a far too slow
+response time).
+
+Requires pyMPD to be installed.
