@@ -22,9 +22,9 @@ class scroller:
     while 1:
       code = self.audible.reader.readkey()
       if code == keycode.KEY_RIGHT:
-        return self.list[self.ix]
+        return (self.ix, self.list[self.ix])
       elif code == keycode.KEY_LEFT:
-        return '-'
+        return (self.ix, None)
       elif code == keycode.KEY_UP:
         if self.ix <= 0:
           self.ix = self.size-1
@@ -37,6 +37,21 @@ class scroller:
         else:
           self.ix = self.ix + 1
         self.audible.say(self.list[self.ix])
+
+class IO:
+  def __init__(self, inp, outp):
+    self._commands = {}
+    if not (callable(inp) and callable(outp):
+      raise TypeError, "both arguments must be callable"
+    self._commands['in']  = inp
+    self._commands['out'] = outp
+
+  def __getattr__(self, attr):
+    try:
+        ret = self._commands[attr]
+    except KeyError:
+        raise AttributeError("'%s' object has no attribute '%s'" %
+                             (self.__class__.__name__, attr))
 
 class audibleMPD:
 
@@ -109,20 +124,29 @@ class audibleMPD:
 
   def nextSong(self):
     self.client.next()
-    self.client.pause()
     cur = self.client.currentsong()
     self.say("%s by %s" % (cur['title'], cur['artist']))
-    self.client.pause()
 
   def artistChooser(self):
-    letter = scroller(self, map(chr, range(65, 91))).scroll()
-    print letter
-    if letter == '-':
-      return
-    songlist = ["%s by %s" % (song['title'], song['artist']) for song in self.client.playlistinfo()]
-    song = scroller(self, songlist).scroll()
-    if song == -1:
-      return
+    lix = 0
+    while 1: # Letter loop
+      lix, letter = scroller(self, map(chr, range(65, 91)), lix).scroll()
+      if not letter:
+        break
+      aix = 0
+      while 1: # Artist loop
+        artists = [artist for artist in sorted(self.client.list("artist"))
+                  if len(artist) > 0 and artist[0].upper() == letter]
+        aix, artist = scroller(self, artists, aix).scroll()
+        if not artist:
+          break
+        six = 0
+        while 1:
+          songlist = self.client.list("title", "artist", artist)
+          six, song = scroller(self, songlist, six).scroll()
+          if not song:
+            break
+          # playsong
     
     
 

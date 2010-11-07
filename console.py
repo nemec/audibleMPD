@@ -1,3 +1,8 @@
+from os import getuid
+
+if getuid() != 0:
+  raise ImportError, "Must be root to get keypresses."
+
 from struct import unpack
 
 #@TODO  Does not queue up keypresses. If you press a second key before you
