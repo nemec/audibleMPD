@@ -73,9 +73,11 @@ class audibleMPD:
     oldvolume = int(self.client.status()["volume"])
     if oldvolume > 0:
       self.client.setvol(int(1.0*oldvolume*volume/100))
-
-    p = subprocess.Popen(['espeak', text], close_fds = True)
-    p.communicate()
+    if self.speechproc != None and self.speechproc.poll()==None:
+      self.speechproc.kill() # Kill the currently running process, in case we go "next" before it finishes speaking
+    self.speechproc = subprocess.Popen(['espeak', text], close_fds = True)
+    #p.communicate()  We don't want to block
+    
     
     if oldvolume > 0:
       self.client.setvol(oldvolume)
