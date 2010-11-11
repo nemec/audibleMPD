@@ -55,6 +55,7 @@ class audibleMPD:
   def __init__(self, eventpath):
     self.initialize_mpd()
     self.reader = console.reader(eventpath)
+    self.speechproc = None
 
   def initialize_mpd(self):
     self.client = mpd.MPDClient()
