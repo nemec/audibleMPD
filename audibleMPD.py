@@ -3,7 +3,8 @@
 import mpd
 import threading
 import gobject
-import subprocess
+import subprocess as sp
+import re
 from sys import exit
 from types import MethodType
 import console
@@ -66,22 +67,30 @@ class audibleMPD:
       print "currently %s" % self.client.mpd_version
       exit()
 
-  def say(self, text, volume = 80):
-    text = "\"%s\"" % text
+  def volumedown(self):
+    self.client.setvol(int(self.client.status()["volume"])-5)    
+
+  def volumeup(self):
+    self.client.setvol(int(self.client.status()["volume"])+5)
+
+  def say(self, text, volume = 0):
+    text = re.sub("'", "", "\"%s\"" % text)
     print text
 
-    # Cut volume to 'volume' percent of current
-    oldvolume = int(self.client.status()["volume"])
-    if oldvolume > 0:
-      self.client.setvol(int(1.0*oldvolume*volume/100))
+    if volume != 0:
+      # Cut volume to 'volume' percent of current
+      oldvolume = int(self.client.status()["volume"])
+      if oldvolume > 0:
+        self.client.setvol(int(1.0*oldvolume*volume/100))
     if self.speechproc != None and self.speechproc.poll()==None:
       self.speechproc.kill() # Kill the currently running process, in case we go "next" before it finishes speaking
-    self.speechproc = subprocess.Popen(['espeak', text], close_fds = True)
-    #p.communicate()  We don't want to block
-    
-    
-    if oldvolume > 0:
-      self.client.setvol(oldvolume)
+    cmd = ('/opt/swift/bin/swift "'+text+'" -o say.wav && sox -V1 say.wav'
+          ' -t wav speech.wav trim 8 && aplay speech.wav;')
+    self.speechproc = sp.Popen(cmd, close_fds = True, stdout = sp.PIPE, stderr = sp.PIPE, shell=True)
+    if volume != 0:
+      p.communicate()  # block until finished speaking
+      if oldvolume > 0:
+        self.client.setvol(oldvolume)
 
   def play_toggle(self):
     if self.client.status()['state'] == "stop":
@@ -132,18 +141,21 @@ class audibleMPD:
   def main(self):
     while 1:
       code = self.reader.readkey()
-      if code == keycode.KEY_COMMA:
+      if code == keycode.KEY_PREVIOUSSONG:
         self.prevSong()
-      elif code == keycode.KEY_DOT:
+      elif code == keycode.KEY_NEXTSONG:
         self.nextSong()
-      elif code == keycode.KEY_P:
+      elif code == keycode.BTN_RIGHT:
         self.artistChooser()
-      elif code == keycode.KEY_SLASH:
+      elif code == keycode.KEY_PLAYPAUSE:
         self.play_toggle()
-    
+      elif code == keycode.KEY_VOLUMEUP:
+        self.volumeup()
+      elif code == keycode.KEY_VOLUMEDOWN:
+        self.volumedown()
     
 
 if __name__ == "__main__":
 
-  mpd = audibleMPD("/dev/input/event4")
+  mpd = audibleMPD("/dev/input/event3")
   mpd.main()

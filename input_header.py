@@ -100,3 +100,10 @@ class input_header():
       if key.lower() in k.lower():
         ret.append(k)
     return ret
+
+  def get_keyname(self, value):
+    try:
+      key = [k for k, v in self._inputmap.iteritems() if v == value][0]
+    except:
+      return ""
+    return key
