@@ -101,9 +101,11 @@ class input_header():
         ret.append(k)
     return ret
 
+  def get_keynames(self, value):
+    return [k for k, v in self._inputmap.iteritems() if v == value]
+
   def get_keyname(self, value):
     try:
-      key = [k for k, v in self._inputmap.iteritems() if v == value][0]
+      return self.get_keynames(value)[0]
     except:
       return ""
-    return key
