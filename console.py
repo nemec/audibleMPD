@@ -10,6 +10,9 @@ from struct import unpack
 # Code 0 = Mouse x axis, val = mouse accel (with +/-)
 # Code 1 = Mouse y axis, val = mouse accel (with +/-)
 
+KEY_PRESS = 1
+KEY_RELEASE = 2
+
 class keyevent(object):
   def __init__(self, t_sec, t_usec, typ, code, val):
     self.ih = input_header()
@@ -33,18 +36,10 @@ class reader(gobject.GObject):
                   (gobject.TYPE_PYOBJECT, )),
 
     "key_down": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                  (gobject.TYPE_INT, )),
+                  (gobject.TYPE_PYOBJECT, )),
     "key_up": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                  (gobject.TYPE_INT, )),
-    "key_repeat": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                  (gobject.TYPE_INT, )),
+                  (gobject.TYPE_PYOBJECT, )),
 
-    "keyevent_down": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                  (gobject.TYPE_PYOBJECT, )),
-    "keyevent_up": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                  (gobject.TYPE_PYOBJECT, )),
-    "keyevent_repeat": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-                  (gobject.TYPE_PYOBJECT, )),
     "all": (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
                   (gobject.TYPE_PYOBJECT, )),
   }
@@ -52,8 +47,11 @@ class reader(gobject.GObject):
   def __init__(self, eventpath = DEFAULT_EVENT_PATH, keywatches = None):
     gobject.GObject.__init__(self)
     self.eventpath = eventpath
-    self.lastkey = 0
+    self.trap_repeats = False
     self.port = open(self.eventpath,"rb")
+
+  def trap_repeat(self, on):
+    self.trap_repeats = on
 
   def emit_events(self, ev):
     if ev.type == ih.EV_ABS:
@@ -66,6 +64,13 @@ class reader(gobject.GObject):
         self.emit("mouse_rel", (ev.value, 0))
       elif ev.code == ih.REL_Y:
         self.emit("mouse_rel", (0, ev.value))
+    elif ev.type == ih.EV_KEY:
+      if ev.value == 0:
+        self.emit("key_up", ev)
+      elif ev.value == 1:
+        self.emit("key_down", ev)
+      elif ev.value == 2 and self.trap_repeats:
+        self.emit("key_down", ev)
     self.emit("all", ev)
 
   def readkeyevent(self, emit = False):
@@ -99,8 +104,9 @@ if __name__ == "__main__":
   gobject.threads_init()
   from input_header import input_header
   ih = input_header()
-  r = reader("/dev/input/event17")
+  r = reader("/dev/input/event9")
   def print_event(obj, ev):
     print ev
-  r.connect("all", print_event)
+  r.connect("key_down", print_event)
+  r.trap_repeat(True)
   r.run()
